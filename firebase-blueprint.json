@@ -1,0 +1,42 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "User Profile",
+      "description": "Stores basic user information and preferences.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "description": "Unique identifier for the user." },
+        "email": { "type": "string", "format": "email", "description": "User's email address." },
+        "displayName": { "type": "string", "description": "User's display name." },
+        "photoURL": { "type": "string", "description": "User's profile picture URL." },
+        "createdAt": { "type": "string", "format": "date-time", "description": "When the profile was created." }
+      },
+      "required": ["uid", "email"]
+    },
+    "AnalysisRecord": {
+      "title": "Analysis Record",
+      "description": "Stores results of a single gait or posture analysis session.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "description": "User ID who owns this record." },
+        "timestamp": { "type": "string", "format": "date-time", "description": "When the analysis was performed." },
+        "type": { "type": "string", "enum": ["gait", "posture"], "description": "Type of analysis." },
+        "metrics": { "type": "object", "description": "Key metrics like cadence, posture score, etc." },
+        "aiAnalysis": { "type": "string", "description": "The generated AI report text." },
+        "angleHistory": { "type": "array", "items": { "type": "object" }, "description": "Sampled historical data for charts." },
+        "videoUrl": { "type": "string", "description": "URL to the uploaded video in Firebase Storage." }
+      },
+      "required": ["uid", "timestamp", "type", "metrics"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "UserProfile",
+      "description": "User profile documents."
+    },
+    "/users/{userId}/history/{recordId}": {
+      "schema": "AnalysisRecord",
+      "description": "Historical analysis records for a specific user."
+    }
+  }
+}

@@ -1,0 +1,85 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    // Collection: /users/{userId}
+    // Document ID: {userId}
+    // Fields:
+    //   - uid: string (required, immutable)
+    //   - email: string (required, immutable)
+    //   - displayName: string (optional)
+    //   - photoURL: string (optional)
+    //   - createdAt: string (required, immutable)
+    //
+    // Collection: /users/{userId}/history/{recordId}
+    // Document ID: {recordId}
+    // Fields:
+    //   - uid: string (required, immutable)
+    //   - type: string (required, enum: ['gait', 'posture'])
+    //   - timestamp: string (required, immutable)
+    //   - metrics: map (required)
+    //   - aiAnalysis: string (optional)
+    //   - angleHistory: list (optional)
+    // ===============================================================
+
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() &&
+        (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' ||
+          (request.auth.token.email == "roypublicmail20@gmail.com" && request.auth.token.email_verified == true));
+    }
+
+    function isValidUser(data) {
+      return data.uid is string && data.uid.size() > 0 &&
+             data.email is string && data.email.size() > 0 &&
+             data.createdAt is string &&
+             (!('role' in data) || data.role in ['admin', 'user']);
+    }
+
+    function isValidRecord(data) {
+      return data.uid is string && data.uid.size() > 0 &&
+             data.type in ['gait', 'posture'] &&
+             data.timestamp is string &&
+             data.metrics is map &&
+             (!('aiAnalysis' in data) || data.aiAnalysis is string) &&
+             (!('angleHistory' in data) || data.angleHistory is list);
+    }
+
+    function uidUnchanged() {
+      return !('uid' in request.resource.data) || request.resource.data.uid == request.auth.uid;
+    }
+
+    function uidNotModified() {
+      return !('uid' in request.resource.data) || request.resource.data.uid == resource.data.uid;
+    }
+
+    // ===============================================================
+    // Rules
+    // ===============================================================
+
+    match /users/{userId} {
+      allow read: if isOwner(userId) || isAdmin();
+      allow create: if isOwner(userId) && isValidUser(request.resource.data) && uidUnchanged() && (!('role' in request.resource.data) || request.resource.data.role == 'user');
+      allow update: if (isOwner(userId) && isValidUser(request.resource.data) && uidNotModified() && (request.resource.data.role == resource.data.role)) || isAdmin();
+
+      match /history/{recordId} {
+        allow read: if isOwner(userId) || isAdmin();
+        allow create: if isOwner(userId) && isValidRecord(request.resource.data) && uidUnchanged();
+        allow update: if (isOwner(userId) && isValidRecord(request.resource.data) && uidNotModified()) || isAdmin();
+        allow delete: if isOwner(userId) || isAdmin();
+      }
+    }
+  }
+}

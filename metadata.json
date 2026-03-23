@@ -1,0 +1,7 @@
+{
+  "name": "StepSense AI - Gait Analysis",
+  "description": "Professional gait analysis tool using AI to track joint angles, analyze walking patterns, and provide clinical insights with color-coded feedback.",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}
